@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GUNPLA CUP - FFA Bracket Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #0f0f0f;
+      color: white;
+      font-family: 'Montserrat', sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    .header {
+      background-color: #1a1a1a;
+      padding: 20px;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    textarea {
+      width: 80%;
+      height: 200px;
+      margin-top: 20px;
+      font-size: 16px;
+      font-family: monospace;
+    }
+
+    .buttons {
+      margin: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      background: linear-gradient(90deg, #ff416c, #ff4b2b);
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .group-card {
+      border: 1px solid #444;
+      margin: 10px auto;
+      max-width: 400px;
+      padding: 10px;
+      background-color: #1a1a1a;
+      border-radius: 8px;
+    }
+
+    ul {
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .footer {
+      font-size: 14px;
+      padding: 10px;
+      background-color: #1a1a1a;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>GUNPLA CUP - FFA Bracket Generator</h1>
+  </div>
+
+  <textarea id="playerInput" placeholder="Masukkan satu nama pemain per baris..."></textarea>
+
+  <div class="buttons">
+    <button onclick="generateBracket()">Generate Bracket</button>
+    <button onclick="exportToSheet()" id="exportButton" style="display:none;">Kirim ke Spreadsheet</button>
+  </div>
+
+  <div id="bracket"></div>
+
+  <div class="footer">
+    © 2025 <a href="https://www.instagram.com/astagaucup" target="_blank">@astagaucup</a>. All rights reserved.
+  </div>
+
+  <script>
+    let groups = [];
+
+    function generateBracket() {
+      const input = document.getElementById("playerInput").value.trim();
+      const players = input.split("\n").map(p => p.trim()).filter(p => p);
+      if (players.length < 8) {
+        alert("Minimal 8 pemain diperlukan.");
+        return;
+      }
+
+      // Shuffle
+      for (let i = players.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [players[i], players[j]] = [players[j], players[i]];
+      }
+
+      // Bagi per grup (8 per grup)
+      groups = [];
+      for (let i = 0; i < players.length; i += 8) {
+        groups.push(players.slice(i, i + 8));
+      }
+
+      // Tampilkan
+      const bracketDiv = document.getElementById("bracket");
+      bracketDiv.innerHTML = "";
+      groups.forEach((group, idx) => {
+        const card = document.createElement("div");
+        card.className = "group-card";
+        card.innerHTML = `<h3>Grup ${idx + 1}</h3><ul>${group.map(name => `<li>${name}</li>`).join("")}</ul>`;
+        bracketDiv.appendChild(card);
+      });
+
+      document.getElementById("exportButton").style.display = "inline-block";
+    }
+
+    function exportToSheet() {
+      if (!groups.length) return alert("Buat bracket dulu!");
+
+      const maxRows = Math.max(...groups.map(g => g.length));
+      const data = [];
+
+      // Header
+      data.push(groups.map((_, i) => `Grup ${i + 1}`));
+
+      // Rows
+      for (let i = 0; i < maxRows; i++) {
+        data.push(groups.map(group => group[i] || ""));
+      }
+
+      fetch("https://script.google.com/macros/s/AKfycbxvcr3GdwsI1PrAh0G1LTMV2hnFUspeVkF089h_sovWoKq-rll-io5IJDtQaFZebxlj4Q/exec", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      })
+      .then(res => res.text())
+      .then(msg => {
+        alert(msg.includes("✅") ? msg : "❌ Terjadi error: " + msg);
+        console.log(msg);
+      })
+      .catch(err => {
+        alert("❌ Gagal mengirim ke Spreadsheet. Cek koneksi atau URL Web App.");
+        console.error(err);
+      });
+    }
+  </script>
+</body>
+</html>
